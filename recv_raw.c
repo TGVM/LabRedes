@@ -18,7 +18,7 @@ char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22};
 char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33};
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[])			//COMEÇA NA 123
 {
 	struct ifreq ifopts;
 	char ifName[IFNAMSIZ];
@@ -29,8 +29,8 @@ int main(int argc, char *argv[])
 	struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 	
 	/* Get interface name */
-	if (argc > 1)
-		strcpy(ifName, argv[1]);
+	if (argc > 1)										//mudou aqui de 1 para 2
+		strcpy(ifName, argv[1]);						//aqui tbm
 	else
 		strcpy(ifName, DEFAULT_IF);
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
 	while (1){
 		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
-		if (raw->ethernet.eth_type == ntohs(ETH_P_IP)){
+		if (raw->ethernet.eth_type == ntohs(ETH_P_IP)){														//mudou parâmetros e conteúdo do if
 			printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
 				numbytes,
 				raw->ip.src[0], raw->ip.src[1], raw->ip.src[2], raw->ip.src[3],

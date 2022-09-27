@@ -16,17 +16,17 @@ char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22};
 char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33};
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[])					//começa na linha 229
 {
 	struct ifreq if_idx, if_mac, ifopts;
-	char ifName[IFNAMSIZ];
+	char ifName[IFNAMSIZ];							//linha a +
 	struct sockaddr_ll socket_address;
 	int sockfd, numbytes, size = 100;
 	
 	uint8_t raw_buffer[ETH_LEN];
 	struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 
-	/* Get interface name */
+	/* Get interface name */						//if a menos
 	if (argc > 1)
 		strcpy(ifName, argv[1]);
 	else
@@ -62,12 +62,20 @@ int main(int argc, char *argv[])
 
 	/* To send data (in this case we will cook an ARP packet and broadcast it =])... */
 
+	/*
+		2 SEÇÕES A + 
+	*/
+
+
 	/* fill the Ethernet frame header */
 	memcpy(raw->ethernet.dst_addr, bcast_mac, 6);
 	memcpy(raw->ethernet.src_addr, src_mac, 6);
 	raw->ethernet.eth_type = htons(ETH_P_IP);
 
 	/* Fill IP header data. Fill all fields and a zeroed CRC field, then update the CRC! */
+
+	//SUBSTITUIDA POR SEÇÃO PARA PREENCHER FRAME ETHERNET
+
 	raw->ip.ver = 0x45;
 	raw->ip.tos = 0x00;
 	raw->ip.len = htons(size + sizeof(struct ip_hdr_s));
