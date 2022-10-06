@@ -11,6 +11,7 @@
 #include <netinet/ether.h>
 #include "raw.h"
 
+#define HOSTNAMESIZE 32
 
 struct host
 {
@@ -61,6 +62,26 @@ void timerCalculator()
 		}
 		sleep(1);
 	}
+}
+
+void printHosts() {
+	printf("\n=== Host List ===\n\n");
+
+	for (int i = 0; i < subscribed_hosts_quantity; i++)
+	{
+		struct host *currHost = &hosts[i];
+		if (!currHost->active) continue;
+		
+		printf("Host Name: ");
+
+		printf("%s",currHost->name);
+		
+		// printf("\nAt MAC: %x:%x:%x:%x:%x:%x\n\n",
+		// 	currHost->mac[0], currHost->mac[1], currHost->mac[2], currHost->mac[3], currHost->mac[4], currHost->mac[5]
+		// );
+		//FAZER ESSE PRINT /\ PRA IP
+	}
+	printf("=================\n");
 }
 
 int sendRaw(char type, char *data[])					
@@ -267,5 +288,138 @@ void * recvRaw(void * a)
 		}
 				
 		//printf("got a packet, %d bytes\n", numbytes);
+	}
+}
+
+int sendStart() {
+	return sendRaw(TYPE_START, NULL);
+}
+
+int sendHeartbeat() {
+	return sendRaw(TYPE_HEARTBEAT, NULL);
+}
+
+
+int sendTalk(char *data) {
+	return sendRaw(TYPE_TALK, data);
+}
+
+void * heartBeater(void * a) {
+	while(1) {
+		sleep(5);
+		sendHeartbeat();
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	subscribed_hosts_quantity = 0;
+	start_received = false;
+	globalArgv = argv;
+	globalArgc = argc;
+	pthread_t receive_th;
+	pthread_t timer_th;
+	pthread_t heartbeat_th;
+
+
+	if (argc > 1) {
+		strcpy(hostName, argv[1]);
+	}
+	else {
+		gethostname(hostName, HOSTNAMESIZE);
+	}
+	printf("Logged as: ");
+	
+	printf("%s",hostName);
+
+	/* Get interface name */
+	if (argc > 2) {
+		strcpy(ifName, argv[2]);
+	}
+	else {
+		strcpy(ifName, DEFAULT_IF);
+	}
+	printf(" using interface %s\n",ifName);
+
+	/* Create receiver thread */
+	pthread_create(&receive_th, NULL, recvRaw, NULL);
+	pthread_create(&timer_th, NULL, timerCalculator, NULL);
+	pthread_create(&heartbeat_th, NULL, heartBeater, NULL);
+	
+	/* Sends Start message */
+	sendStart();
+
+	sleep(3);
+	/* Starts input loop */
+	while(1) {
+		bool sair = false;
+		while(!sair) {
+			printf("Select an option:\n    1 - List Hosts\n    2 - Send Message\n    3 - Exit\n");
+			
+			char entry;
+			entry = getc(stdin);
+			
+			// Flush 
+			int c;
+			while ((c = getchar()) != '\n' && c != EOF);
+			
+			switch(entry) {
+				case '1':
+					printHosts();
+					break;
+				case '2':
+					sair = true;
+					break;
+				case '3':
+					return 0;
+			}
+		}
+
+
+		char target_host_name[16];
+		
+		printf("Type target ");
+		
+		printf("hostname");
+		
+		printf(" to message: \n");
+
+		fgets(target_host_name, 16, stdin);
+		fflush(stdin);
+
+		for(int i = 0; i < 16; i++) {
+			if(target_host_name[i]=='\0') {
+				target_host_name[i-1] = '\0';
+				break;
+			}
+		}
+
+		//pega mac da tabela e coloca na var global //MUDAR PARA IP
+		for (int i = 0; i < subscribed_hosts_quantity; i++)
+		{
+			struct host *currHost = &hosts[i];
+			if (!currHost->active) continue;
+			
+			
+
+			if (strcmp(currHost->name, target_host_name) == 0)
+			{
+				memcpy(dst_mac, currHost->mac, 6);	 //MUDAR PARA IP
+				break;
+			}
+		}
+		
+		char sending_message[64];
+
+		printf("Saying to ");
+		
+		printf("%s", target_host_name);
+
+		printf(": \n");
+
+		fgets(sending_message, 64, stdin);
+		fflush(stdin);
+
+		sendTalk(sending_message);
 	}
 }
