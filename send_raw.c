@@ -13,13 +13,13 @@
 
 char this_mac[6];
 char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22};
-char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33};
+char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22}; // trab não usa um valor definido de destino
+char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33}; //trab não usa src_mac
 
-int main(int argc, char *argv[])					//começa na linha 229
+int main(int argc, char *argv[])					//começa na linha 252
 {
 	struct ifreq if_idx, if_mac, ifopts;
-	char ifName[IFNAMSIZ];							//linha a +
+	char ifName[IFNAMSIZ];							//linha a + (a + pq já tem na parte do recvraw)
 	struct sockaddr_ll socket_address;
 	int sockfd, numbytes, size = 100;
 	
@@ -64,6 +64,10 @@ int main(int argc, char *argv[])					//começa na linha 229
 
 	/*
 		2 SEÇÕES A + 
+
+		L.290 pega target_mac [6] e faz cópia na memória(?)
+		L.295 é um if pra ver se mensagem é tipo talk ou se é um heartbeat após ter 
+		recebido o start, faz um memcpy e troca o valor de start_received (pq?)
 	*/
 
 
@@ -74,7 +78,7 @@ int main(int argc, char *argv[])					//começa na linha 229
 
 	/* Fill IP header data. Fill all fields and a zeroed CRC field, then update the CRC! */
 
-	//SUBSTITUIDA POR SEÇÃO PARA PREENCHER FRAME ETHERNET
+	// SEÇÃO ENTRE LINHAS 79 - 97 SUBSTITUIDA POR SEÇÃO PARA PREENCHER FRAME ETHERNET
 
 	raw->ip.ver = 0x45;
 	raw->ip.tos = 0x00;
@@ -92,6 +96,15 @@ int main(int argc, char *argv[])					//começa na linha 229
 
 	/* fill payload data */
 
+
+	/*
+		SEÇÃO DE FILL DE DADOS DO TRABALHO
+
+		pega tipo de msg
+		muda hostname(pq?)
+		se existir dados faz memcpy
+
+	*/
 
 	/* Send it.. */
 	memcpy(socket_address.sll_addr, dst_mac, 6);

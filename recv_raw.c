@@ -18,7 +18,7 @@ char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22};
 char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33};
 
-int main(int argc, char *argv[])			//COMEÇA NA 123
+int main(int argc, char *argv[])			//COMEÇA NA 126
 {
 	struct ifreq ifopts;
 	char ifName[IFNAMSIZ];
@@ -48,7 +48,10 @@ int main(int argc, char *argv[])			//COMEÇA NA 123
 
 	while (1){
 		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
-		if (raw->ethernet.eth_type == ntohs(ETH_P_IP)){														//mudou parâmetros e conteúdo do if
+		if (raw->ethernet.eth_type == ntohs(ETH_P_IP)){		// muda parâmetros do if												//mudou parâmetros e conteúdo do if
+			//aqui faz testes de memcmp
+			//testa tipo de mensagem com ações diferentes caso start\heartbeat\talk
+			
 			printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
 				numbytes,
 				raw->ip.src[0], raw->ip.src[1], raw->ip.src[2], raw->ip.src[3],
@@ -71,3 +74,11 @@ int main(int argc, char *argv[])			//COMEÇA NA 123
 
 	return 0;
 }
+
+
+/*além das alterações nos 2 códigos houveram adições de métodos aux para calcular 
+tempo entre os heartbeats, print dos hosts, envio das mensagens (os 3 tipos), enviar
+os heartbeats, além da main que controla o "server"
+
+
+*/
