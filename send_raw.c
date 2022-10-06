@@ -34,21 +34,43 @@ char **globalArgv;
 int subscribed_hosts_quantity;
 bool start_received;
 
-int main(int type, char *data[])					//começa na linha 252
+
+void timerCalculator()
+{
+	while(1) {
+		time_t now;
+		time(&now);
+		for (int i = 0; i < subscribed_hosts_quantity; i++)
+		{
+			struct host *currHost = &hosts[i];
+			if (!currHost->active)
+			{
+				continue;
+			}
+			if (difftime(now, currHost->lastHeartbeat) > 15)
+			{
+				currHost->active = false;
+				printf("-> ");
+				
+				printf("Host ");
+				
+				printf("%s",currHost->name);
+				
+				printf(" timedout.\n");
+			}
+		}
+		sleep(1);
+	}
+}
+
+int sendRaw(char type, char *data[])					
 {
 	struct ifreq if_idx, if_mac, ifopts;
-	char ifName[IFNAMSIZ];							//linha a + (a + pq já tem na parte do recvraw)
 	struct sockaddr_ll socket_address;
 	int sockfd, numbytes, size = 100;
 	
 	uint8_t raw_buffer[ETH_LEN];
 	struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
-
-	/* Get interface name */						//if a menos
-	// if (argc > 1)
-	// 	strcpy(ifName, argv[1]);
-	// else
-	// 	strcpy(ifName, DEFAULT_IF);
 
 	/* Open RAW socket */
 	if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1)
@@ -132,4 +154,118 @@ int main(int type, char *data[])					//começa na linha 252
 
 
 	return 0;
+}
+
+
+void * recvRaw(void * a)			
+{
+	struct ifreq ifopts;
+	char ifName[IFNAMSIZ];
+	int sockfd, numbytes;
+	char *p;
+	
+	uint8_t raw_buffer[ETH_LEN];
+	struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
+	
+	/* Get interface name */
+	if (globalArgc > 1)										
+		strcpy(ifName, globalArgv[2]);						
+	else
+		strcpy(ifName, DEFAULT_IF);
+
+	/* Open RAW socket */
+	if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1)
+		perror("socket");
+	
+	/* Set interface to promiscuous mode */
+	strncpy(ifopts.ifr_name, ifName, IFNAMSIZ-1);
+	ioctl(sockfd, SIOCGIFFLAGS, &ifopts);
+	ifopts.ifr_flags |= IFF_PROMISC;
+	ioctl(sockfd, SIOCSIFFLAGS, &ifopts);
+
+	/* End of configuration. Now we can receive data using raw sockets. */
+
+	while (1){
+		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
+		if (raw->ethernet.eth_type == ntohs(ETH_P_IP) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		// muda parâmetros do if												//mudou parâmetros e conteúdo do if
+			
+			if(raw->ip.msg == TYPE_START){
+				printf("Host ");
+				
+				printf("%s", raw->ip.NomeHost);
+
+				// printf(", from MAC %x:%x:%x:%x:%x:%x ",
+				// 	raw->ethernet.src_addr[0], raw->ethernet.src_addr[1], raw->ethernet.src_addr[2], raw->ethernet.src_addr[3], raw->ethernet.src_addr[4], raw->ethernet.src_addr[5]	
+				// );
+
+				//ARRUMAR END IP AQUI
+
+				printf("logged in\n");
+
+				struct host *currHost = &hosts[subscribed_hosts_quantity];
+				memcpy(currHost->mac, raw->ethernet.src_addr,6);	//MUDAR STRUCT TROCAR MAC POR IP
+				memcpy(currHost->name, raw->ip.host_name, 16);
+				currHost->active = true;
+				
+				time(&(currHost->lastHeartbeat));
+				subscribed_hosts_quantity++;
+				memcpy(special_dst_mac, currHost->mac, 6);		//MUDAR STRUCT TROCAR MAC POR IP
+
+				start_received = true;
+				sendHeartbeat();
+
+			} else if (raw->ip.msg == TYPE_HEARTBEAT) {
+				bool achou = false;
+				for (int i = 0; i < subscribed_hosts_quantity; i++)
+				{
+					struct host *currHost = &hosts[i];
+					if (!currHost->active) continue;
+					if (memcmp(currHost->mac, raw->ethernet.src_addr, 6) == 0)		//MUDAR PARA IP
+					{
+						achou = true;
+						time(&(currHost->lastHeartbeat));
+						break;
+					}
+				}
+				if(!achou) {
+					struct host *currHost = &hosts[subscribed_hosts_quantity];
+					memcpy(currHost->mac, raw->ethernet.src_addr,6);		//MUDAR PARA IP
+					memcpy(currHost->name, raw->ip.NomeHost, 6);
+					currHost->active = true;
+					
+					time(&(currHost->lastHeartbeat));
+					subscribed_hosts_quantity++;
+					memcpy(dst_mac, currHost->mac, 6);		//MUDAR PARA IP
+				}
+			} else if (raw->ip.msg == TYPE_TALK) {
+				printf("Message from ");
+				
+				printf("%s", raw->ip.NomeHost);
+
+				printf(":");
+
+				printf(" %s\n", raw->ip.msg);
+			}
+
+			//USAR COMO BASE \/
+
+			// printf("IP packet, %d bytes - src ip: %d.%d.%d.%d dst ip: %d.%d.%d.%d proto: %d\n",
+			// 	numbytes,
+			// 	raw->ip.src[0], raw->ip.src[1], raw->ip.src[2], raw->ip.src[3],
+			// 	raw->ip.dst[0], raw->ip.dst[1], raw->ip.dst[2], raw->ip.dst[3],
+			// 	raw->ip.proto
+			// );
+			// if (raw->ip.proto == PROTO_UDP && raw->udp.dst_port == ntohs(DST_PORT)){
+			// 	p = (char *)&raw->udp + ntohs(raw->udp.udp_len);
+			// 	*p = '\0';
+			// 	printf("src port: %d dst port: %d size: %d msg: %s", 
+			// 	ntohs(raw->udp.src_port), ntohs(raw->udp.dst_port),
+			// 	ntohs(raw->udp.udp_len), (char *)&raw->udp + sizeof(struct udp_hdr_s)
+			// 	); 
+			// }
+			continue;
+		}
+				
+		//printf("got a packet, %d bytes\n", numbytes);
+	}
 }
