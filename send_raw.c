@@ -11,12 +11,30 @@
 #include <netinet/ether.h>
 #include "raw.h"
 
+
+struct host
+{
+	char name[HOSTNAMESIZE];
+	char mac[6];
+	bool active;
+	time_t lastHeartbeat;
+};
+
 char this_mac[6];
 char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22}; // trab não usa um valor definido de destino
 char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33}; //trab não usa src_mac
 
-int main(int argc, char *argv[])					//começa na linha 252
+char ifName[IFNAMSIZ];
+struct host hosts[100];
+char hostName[HOSTNAMESIZE];
+
+int globalArgc;
+char **globalArgv;
+int subscribed_hosts_quantity;
+bool start_received;
+
+int main(int type, char *data[])					//começa na linha 252
 {
 	struct ifreq if_idx, if_mac, ifopts;
 	char ifName[IFNAMSIZ];							//linha a + (a + pq já tem na parte do recvraw)
@@ -27,10 +45,10 @@ int main(int argc, char *argv[])					//começa na linha 252
 	struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 
 	/* Get interface name */						//if a menos
-	if (argc > 1)
-		strcpy(ifName, argv[1]);
-	else
-		strcpy(ifName, DEFAULT_IF);
+	// if (argc > 1)
+	// 	strcpy(ifName, argv[1]);
+	// else
+	// 	strcpy(ifName, DEFAULT_IF);
 
 	/* Open RAW socket */
 	if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1)
@@ -62,24 +80,27 @@ int main(int argc, char *argv[])					//começa na linha 252
 
 	/* To send data (in this case we will cook an ARP packet and broadcast it =])... */
 
-	/*
-		2 SEÇÕES A + 
+	uint8_t target_mac[6];
+	memcpy(target_mac, bcast_mac, 6);
 
-		L.290 pega target_mac [6] e faz cópia na memória(?)
-		L.295 é um if pra ver se mensagem é tipo talk ou se é um heartbeat após ter 
-		recebido o start, faz um memcpy e troca o valor de start_received (pq?)
-	*/
+	//printf("\n218\n");
+
+	if (type == TYPE_TALK || (type == TYPE_HEARTBEAT && start_received))
+	{
+		//target_mac = dst_mac;
+		memcpy(target_mac, dst_mac, 6);
+		start_received = false;
+	}
 
 
 	/* fill the Ethernet frame header */
-	memcpy(raw->ethernet.dst_addr, bcast_mac, 6);
-	memcpy(raw->ethernet.src_addr, src_mac, 6);
+	memcpy(raw->ethernet.dst_addr, target_mac, 6);		
+	memcpy(raw->ethernet.src_addr, this_mac, 6);
 	raw->ethernet.eth_type = htons(ETH_P_IP);
 
 	/* Fill IP header data. Fill all fields and a zeroed CRC field, then update the CRC! */
 
-	// SEÇÃO ENTRE LINHAS 79 - 97 SUBSTITUIDA POR SEÇÃO PARA PREENCHER FRAME ETHERNET
-
+	
 	raw->ip.ver = 0x45;
 	raw->ip.tos = 0x00;
 	raw->ip.len = htons(size + sizeof(struct ip_hdr_s));
@@ -88,23 +109,21 @@ int main(int argc, char *argv[])					//começa na linha 252
 	raw->ip.ttl = 50;
 	raw->ip.proto = 0xff;
 	raw->ip.sum = htons(0x0000);
-
+	
 	/* fill source and destination addresses */
+
+		//FALTA ISSO
 
 	/* calculate the IP checksum */
 	/* raw->ip.sum = htons((~ipchksum((uint8_t *)&raw->ip) & 0xffff)); */
 
 	/* fill payload data */
 
-
-	/*
-		SEÇÃO DE FILL DE DADOS DO TRABALHO
-
-		pega tipo de msg
-		muda hostname(pq?)
-		se existir dados faz memcpy
-
-	*/
+	raw->ip.msg_type = type;
+	strncpy(raw->ip.NomeHost, hostName, HOSTNAMESIZE);
+	if(data != NULL) {
+		memcpy(raw->ip.msg, data, sizeof(raw->ip.msg));
+	}
 
 	/* Send it.. */
 	memcpy(socket_address.sll_addr, dst_mac, 6);
