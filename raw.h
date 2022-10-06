@@ -19,6 +19,8 @@ struct ip_hdr_s {
 	uint16_t sum;			/* checksum */
 	uint8_t src[4];			/* source address */
 	uint8_t dst[4];			/* destination address */
+	char NomeHost[32];
+	char msg[128];
 };
 
 struct udp_hdr_s {
@@ -26,6 +28,12 @@ struct udp_hdr_s {
 	uint16_t dst_port;
 	uint16_t udp_len;
 	uint16_t udp_chksum;
+};
+
+enum msg_type {
+	TYPE_START,
+	TYPE_HEARTBEAT,
+	TYPE_TALK
 };
 
 struct eth_frame_s {
