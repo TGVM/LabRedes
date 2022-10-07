@@ -191,7 +191,7 @@ int sendRaw(char type, char *data[])
 		//FALTA ISSO
 	//raw->ip.dst = ;
 	//raw->ip.src = this_ip; //(?)
-	memcpy(raw->ip.src, this_ip, 4);
+	//memcpy(raw->ip.src, this_ip, 4);
 
 	/* calculate the IP checksum */
 	/* raw->ip.sum = htons((~ipchksum((uint8_t *)&raw->ip) & 0xffff)); */
@@ -293,7 +293,7 @@ void * recvRaw(void * a)
 				if(!achou) {
 					struct host *currHost = &hosts[subscribed_hosts_quantity];
 					memcpy(currHost->mac, raw->ethernet.src_addr,6);		
-					memcpy(currHost->ip, raw->ip.src,6);
+					memcpy(currHost->ip, raw->ip.src,4);
 					memcpy(currHost->name, raw->ip.NomeHost, 16);
 					currHost->active = true;
 					
