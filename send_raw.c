@@ -17,14 +17,19 @@ struct host
 {
 	char name[HOSTNAMESIZE];
 	char mac[6];
+	char ip[4];
 	bool active;
 	time_t lastHeartbeat;
 };
 
 char this_mac[6];
 char bcast_mac[6] =	{0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-char dst_mac[6] =	{0x00, 0x00, 0x00, 0x22, 0x22, 0x22}; // trab não usa um valor definido de destino
-char src_mac[6] =	{0x00, 0x00, 0x00, 0x33, 0x33, 0x33}; //trab não usa src_mac
+char dst_mac[6];
+
+uint8_t this_ip[4];
+uint8_t bcast_ip[4] = {255, 255, 255, 255};
+uint8_t dst_ip[4];
+
 
 char ifName[IFNAMSIZ];
 struct host hosts[100];
@@ -76,6 +81,11 @@ void printHosts() {
 
 		printf("%s",currHost->name);
 		
+		printf("\nAt ip: %d.%d.%d.%d\n\n",
+			currHost->ip[0], currHost->ip[1], currHost->ip[2], currHost->ip[3]
+		);
+		//VER SE ESTÁ FUNCIONANDO
+
 		// printf("\nAt MAC: %x:%x:%x:%x:%x:%x\n\n",
 		// 	currHost->mac[0], currHost->mac[1], currHost->mac[2], currHost->mac[3], currHost->mac[4], currHost->mac[5]
 		// );
@@ -124,7 +134,9 @@ int sendRaw(char type, char *data[])
 	/* To send data (in this case we will cook an ARP packet and broadcast it =])... */
 
 	uint8_t target_mac[6];
+	uint8_t target_ip[4];
 	memcpy(target_mac, bcast_mac, 6);
+	memcpy(target_ip, bcast_ip, 4);
 
 	//printf("\n218\n");
 
@@ -132,6 +144,7 @@ int sendRaw(char type, char *data[])
 	{
 		//target_mac = dst_mac;
 		memcpy(target_mac, dst_mac, 6);
+		memcpy(target_ip, dst_ip, 4);
 		start_received = false;
 	}
 
@@ -156,6 +169,8 @@ int sendRaw(char type, char *data[])
 	/* fill source and destination addresses */
 
 		//FALTA ISSO
+	//raw->ip.dst = ;
+	raw->ip.src = this_ip; //(?)
 
 	/* calculate the IP checksum */
 	/* raw->ip.sum = htons((~ipchksum((uint8_t *)&raw->ip) & 0xffff)); */
@@ -210,7 +225,7 @@ void * recvRaw(void * a)
 		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
 		if (raw->ethernet.eth_type == ntohs(ETH_P_IP) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		// muda parâmetros do if												//mudou parâmetros e conteúdo do if
 			
-			if(raw->ip.msg == TYPE_START){
+			if(raw->ip.msg_type == TYPE_START){
 				printf("Host ");
 				
 				printf("%s", raw->ip.NomeHost);
@@ -219,23 +234,29 @@ void * recvRaw(void * a)
 				// 	raw->ethernet.src_addr[0], raw->ethernet.src_addr[1], raw->ethernet.src_addr[2], raw->ethernet.src_addr[3], raw->ethernet.src_addr[4], raw->ethernet.src_addr[5]	
 				// );
 
+				printf(", from ip %d.%d.%d.%d ",
+				raw->ip.src[0], raw->ip.src[1], raw->ip.src[2], raw->ip.src[3]
+				);
+
+
 				//ARRUMAR END IP AQUI
+				//VER SE TA CERTO
 
 				printf("logged in\n");
 
 				struct host *currHost = &hosts[subscribed_hosts_quantity];
-				memcpy(currHost->mac, raw->ethernet.src_addr,6);	//MUDAR STRUCT TROCAR MAC POR IP
+				memcpy(currHost->mac, raw->ethernet.src_addr,6);	
+				memcpy(currHost->ip, raw->ip.src, 4);
 				memcpy(currHost->name, raw->ip.host_name, 16);
 				currHost->active = true;
 				
 				time(&(currHost->lastHeartbeat));
 				subscribed_hosts_quantity++;
-				memcpy(special_dst_mac, currHost->mac, 6);		//MUDAR STRUCT TROCAR MAC POR IP
-
+				
 				start_received = true;
 				sendHeartbeat();
 
-			} else if (raw->ip.msg == TYPE_HEARTBEAT) {
+			} else if (raw->ip.msg_type == TYPE_HEARTBEAT) {
 				bool achou = false;
 				for (int i = 0; i < subscribed_hosts_quantity; i++)
 				{
@@ -250,15 +271,17 @@ void * recvRaw(void * a)
 				}
 				if(!achou) {
 					struct host *currHost = &hosts[subscribed_hosts_quantity];
-					memcpy(currHost->mac, raw->ethernet.src_addr,6);		//MUDAR PARA IP
-					memcpy(currHost->name, raw->ip.NomeHost, 6);
+					memcpy(currHost->mac, raw->ethernet.src_addr,6);		
+					memcpy(currHost->ip, raw->ip.src,6);
+					memcpy(currHost->name, raw->ip.NomeHost, 4);
 					currHost->active = true;
 					
 					time(&(currHost->lastHeartbeat));
 					subscribed_hosts_quantity++;
-					memcpy(dst_mac, currHost->mac, 6);		//MUDAR PARA IP
+					memcpy(dst_mac, currHost->mac, 6);		
+					memcpy(dst_ip, currHost->ip, 4)
 				}
-			} else if (raw->ip.msg == TYPE_TALK) {
+			} else if (raw->ip.msg_type == TYPE_TALK) {
 				printf("Message from ");
 				
 				printf("%s", raw->ip.NomeHost);
@@ -404,7 +427,8 @@ int main(int argc, char *argv[])
 
 			if (strcmp(currHost->name, target_host_name) == 0)
 			{
-				memcpy(dst_mac, currHost->mac, 6);	 //MUDAR PARA IP
+				memcpy(dst_mac, currHost->mac, 6);	 
+				memcpy(dst_ip, currHost->ip, 4)
 				break;
 			}
 		}

@@ -21,7 +21,7 @@ struct ip_hdr_s {
 	uint8_t dst[4];			/* destination address */
 	uint8_t msg_type;		//byte de tipo de mensagem
 	char NomeHost[32];		//array host name
-	char msg[128];			// array msg enviada
+	char msg[128];			//array msg enviada
 };
 
 struct udp_hdr_s {
