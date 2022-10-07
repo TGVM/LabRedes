@@ -132,6 +132,22 @@ int sendRaw(char type, char *data[])
 		perror("SIOCGIFHWADDR");
 	memcpy(this_mac, if_mac.ifr_hwaddr.sa_data, 6);
 
+	//this_ip???
+
+	struct ifreq ifr;
+	int n;
+    n = socket(AF_INET, SOCK_DGRAM, 0);
+    //Type of address to retrieve - IPv4 IP address
+    ifr.ifr_addr.sa_family = AF_INET;
+    //Copy the interface name in the ifreq structure
+    ioctl(n, SIOCGIFADDR, &ifr);
+    close(n);
+    //display result
+    //printf("IP Address is %s - %s\n" , array , inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr)
+
+
+	memcpy(this_ip, inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr), 6);
+
 	/* End of configuration. Now we can send data using raw sockets. */
 
 
