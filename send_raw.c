@@ -140,7 +140,8 @@ int sendRaw(char type, char *data[])
     //Type of address to retrieve - IPv4 IP address
     ifr.ifr_addr.sa_family = AF_INET;
     //Copy the interface name in the ifreq structure
-    ioctl(n, SIOCGIFADDR, &ifr);
+    // strncpy(ifr.ifr_name , array , IFNAMSIZ - 1);
+    // ioctl(n, SIOCGIFADDR, &ifr);
     close(n);
     //display result
     //printf("IP Address is %s - %s\n" , array , inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr)
@@ -191,7 +192,7 @@ int sendRaw(char type, char *data[])
 		//FALTA ISSO
 	//raw->ip.dst = ;
 	//raw->ip.src = this_ip; //(?)
-	//memcpy(raw->ip.src, this_ip, 4);
+	memcpy(raw->ip.src, this_ip, 4);
 
 	/* calculate the IP checksum */
 	/* raw->ip.sum = htons((~ipchksum((uint8_t *)&raw->ip) & 0xffff)); */
@@ -293,7 +294,7 @@ void * recvRaw(void * a)
 				if(!achou) {
 					struct host *currHost = &hosts[subscribed_hosts_quantity];
 					memcpy(currHost->mac, raw->ethernet.src_addr,6);		
-					memcpy(currHost->ip, raw->ip.src,4);
+					memcpy(currHost->ip, raw->ip.src,6);
 					memcpy(currHost->name, raw->ip.NomeHost, 16);
 					currHost->active = true;
 					
