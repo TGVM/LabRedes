@@ -230,7 +230,7 @@ void * recvRaw(void * a)
 		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
 		if (raw->ethernet.eth_type == ntohs(ETHER_TYPE) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		
 			
-			if(memcmp(raw->ethernet.dst_addr, this_mac, 6)!=0 && memcmp(raw->ethernet.dst_addr, test, 6)!=0) {
+			if(memcmp(raw->ethernet.dst_addr, this_mac, 6)!=0 && memcmp(raw->ethernet.dst_addr, bcast_mac, 6)!=0) {
 				continue;
 			}
 			
