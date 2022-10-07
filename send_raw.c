@@ -189,7 +189,7 @@ int sendRaw(char type, char *data[])
 	}
 
 	/* Send it.. */
-	memcpy(socket_address.sll_addr, dst_mac, 6);
+	memcpy(socket_address.sll_addr, target_mac, 6);
 	if (sendto(sockfd, raw_buffer, sizeof(struct eth_hdr_s) + sizeof(struct ip_hdr_s) + size, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
 		printf("Send failed\n");
 
@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
 
 		printf(": \n");
 
-		fgets(sending_message, 64, stdin);
+		fgets(sending_message, 128, stdin);
 		fflush(stdin);
 
 		sendTalk(sending_message);
