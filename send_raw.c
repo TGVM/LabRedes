@@ -209,7 +209,7 @@ void * recvRaw(void * a)
 	struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 	
 	/* Get interface name */
-	if (globalArgc > 1)										
+	if (globalArgc > 2)										
 		strcpy(ifName, globalArgv[2]);						
 	else
 		strcpy(ifName, DEFAULT_IF);
@@ -228,24 +228,24 @@ void * recvRaw(void * a)
 
 	while (1){
 		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
-		if (raw->ethernet.eth_type == ntohs(ETH_P_IP) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		// muda parâmetros do if												//mudou parâmetros e conteúdo do if
+		if (raw->ethernet.eth_type == ntohs(ETH_P_IP) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		
+			
+			if(memcmp(raw->ethernet.dst_addr, this_mac, 6)!=0 && memcmp(raw->ethernet.dst_addr, test, 6)!=0) {
+				continue;
+			}
 			
 			if(raw->ip.msg_type == TYPE_START){
 				printf("Host ");
 				
 				printf("%s", raw->ip.NomeHost);
 
-				// printf(", from MAC %x:%x:%x:%x:%x:%x ",
-				// 	raw->ethernet.src_addr[0], raw->ethernet.src_addr[1], raw->ethernet.src_addr[2], raw->ethernet.src_addr[3], raw->ethernet.src_addr[4], raw->ethernet.src_addr[5]	
-				// );
+				
 
 				printf(", from ip %d.%d.%d.%d ",
 				raw->ip.src[0], raw->ip.src[1], raw->ip.src[2], raw->ip.src[3]
 				);
 
 
-				//ARRUMAR END IP AQUI
-				//VER SE TA CERTO
 
 				printf("logged in\n");
 
@@ -267,7 +267,7 @@ void * recvRaw(void * a)
 				{
 					struct host *currHost = &hosts[i];
 					if (!currHost->active) continue;
-					if (memcmp(currHost->mac, raw->ethernet.src_addr, 6) == 0)		//MUDAR PARA IP
+					if (memcmp(currHost->mac, raw->ethernet.src_addr, 6) == 0)		
 					{
 						achou = true;
 						time(&(currHost->lastHeartbeat));
@@ -278,7 +278,7 @@ void * recvRaw(void * a)
 					struct host *currHost = &hosts[subscribed_hosts_quantity];
 					memcpy(currHost->mac, raw->ethernet.src_addr,6);		
 					memcpy(currHost->ip, raw->ip.src,6);
-					memcpy(currHost->name, raw->ip.NomeHost, 4);
+					memcpy(currHost->name, raw->ip.NomeHost, 16);
 					currHost->active = true;
 					
 					time(&(currHost->lastHeartbeat));
