@@ -156,7 +156,7 @@ int sendRaw(char type, char *data[])
 	/* fill the Ethernet frame header */
 	memcpy(raw->ethernet.dst_addr, target_mac, 6);		
 	memcpy(raw->ethernet.src_addr, this_mac, 6);
-	raw->ethernet.eth_type = htons(ETH_P_IP);
+	raw->ethernet.eth_type = htons(ETHER_TYPE);
 
 	/* Fill IP header data. Fill all fields and a zeroed CRC field, then update the CRC! */
 
@@ -228,7 +228,7 @@ void * recvRaw(void * a)
 
 	while (1){
 		numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
-		if (raw->ethernet.eth_type == ntohs(ETH_P_IP) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		
+		if (raw->ethernet.eth_type == ntohs(ETHER_TYPE) && memcmp(raw->ethernet.src_addr, this_mac, 6)){		
 			
 			if(memcmp(raw->ethernet.dst_addr, this_mac, 6)!=0 && memcmp(raw->ethernet.dst_addr, test, 6)!=0) {
 				continue;
