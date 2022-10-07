@@ -10,6 +10,10 @@
 #include <net/if.h>
 #include <netinet/ether.h>
 #include "raw.h"
+#include <pthread.h>
+#include <time.h>
+#include <stdbool.h>
+#include <unistd.h>
 
 #define HOSTNAMESIZE 32
 
@@ -170,7 +174,8 @@ int sendRaw(char type, char *data[])
 
 		//FALTA ISSO
 	//raw->ip.dst = ;
-	raw->ip.src = this_ip; //(?)
+	//raw->ip.src = this_ip; //(?)
+	memcpy(raw->ip.src, this_ip, 4);
 
 	/* calculate the IP checksum */
 	/* raw->ip.sum = htons((~ipchksum((uint8_t *)&raw->ip) & 0xffff)); */
@@ -247,7 +252,7 @@ void * recvRaw(void * a)
 				struct host *currHost = &hosts[subscribed_hosts_quantity];
 				memcpy(currHost->mac, raw->ethernet.src_addr,6);	
 				memcpy(currHost->ip, raw->ip.src, 4);
-				memcpy(currHost->name, raw->ip.host_name, 16);
+				memcpy(currHost->name, raw->ip.NomeHost, 16);
 				currHost->active = true;
 				
 				time(&(currHost->lastHeartbeat));
@@ -279,7 +284,7 @@ void * recvRaw(void * a)
 					time(&(currHost->lastHeartbeat));
 					subscribed_hosts_quantity++;
 					memcpy(dst_mac, currHost->mac, 6);		
-					memcpy(dst_ip, currHost->ip, 4)
+					memcpy(dst_ip, currHost->ip, 4);
 				}
 			} else if (raw->ip.msg_type == TYPE_TALK) {
 				printf("Message from ");
@@ -428,7 +433,7 @@ int main(int argc, char *argv[])
 			if (strcmp(currHost->name, target_host_name) == 0)
 			{
 				memcpy(dst_mac, currHost->mac, 6);	 
-				memcpy(dst_ip, currHost->ip, 4)
+				memcpy(dst_ip, currHost->ip, 4);
 				break;
 			}
 		}
